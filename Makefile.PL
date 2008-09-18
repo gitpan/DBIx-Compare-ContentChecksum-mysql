@@ -7,7 +7,7 @@ use File::Basename;
 WriteMakefile(
     NAME              => 'DBIx::Compare::ContentChecksum::mysql',
     VERSION_FROM      => 'lib/DBIx/Compare/ContentChecksum/mysql.pm',
-    PREREQ_PM         => {  DBIx::Compare => 1.0,
+    PREREQ_PM         => {  DBIx::Compare => 1.1,
     						DBI => 1.605,
     						DBD::mysql => 4.007,
     						Test::Differences => 0.47,

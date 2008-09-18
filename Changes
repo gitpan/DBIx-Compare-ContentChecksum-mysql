@@ -2,5 +2,5 @@ Revision history for Perl extension DBIx::Compare::ContentChecksum::mysql
 
 1.0     Wed July 30 16:49:00 2008
 	- First CPAN release as DBIx::ContentChecksum::mysql
-1.1	Tue August 19 16:00:00 2008
+1.2	Tue August 19 16:00:00 2008
 	- Moved to DBIx::Compare::ContentChecksum:: namespace

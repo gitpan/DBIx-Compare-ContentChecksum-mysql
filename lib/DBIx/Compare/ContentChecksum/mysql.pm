@@ -4,7 +4,7 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = '1.0';
+our $VERSION = '1.2';
 
 require DBIx::Compare;
 
@@ -16,6 +16,7 @@ require DBIx::Compare;
 		my $self = shift;
 		
 		my $tables = $self->compare_table_lists;
+		my $tfields = $self->compare_table_fields;
 		my $rows = $self->compare_row_counts;
 		my $fields = $self->compare_fields_checksum;
 
@@ -24,24 +25,28 @@ require DBIx::Compare;
 		    return $hDiffs;
 		} else {
 			unless ($tables){
-				print 	"Table Lists are different\n".
+				warn 	"Table Lists are different\n".
 						"\tComparing the common tables...\n";
 			}
 			unless ($rows){
-				print 	"Row counts in some tables are different\n".
+				warn 	"Row counts in some tables are different\n".
 						"\tComparing the content of tables with the same row count...\n";
 			}	
-			unless ($fields){
-				print 	"Data are different in some tables\n";
+			unless ($tfields){
+				warn 	"Table fields are different\n".
+						"\tComparing the common fields...\n";
 			}
-			if ($tables && $rows && $fields){
-				print 	"The databases are probably the same\n";
+			unless ($fields){
+				warn 	"Data are different in some tables\n";
+			}
+			if ($tfields && $tables && $rows && $fields){
+				warn 	"The databases are probably the same\n";
 			} else {
 				if (%$hDiffs){
 					while (my ($type,$aErrors) = each %$hDiffs){
-						print "$type:\n";
+						warn "$type:\n";
 						for my $error (@$aErrors){
-							print "\t$error\n";
+							warn "\t$error\n";
 						}
 					}
 				}
@@ -54,20 +59,15 @@ require DBIx::Compare;
 		if (@_){
 			$aTables = [shift];
 		} else {
-			$aTables = $self->get_tables;
+			$aTables = $self->similar_tables;
 		}
 		my ($dbh1,$dbh2) = $self->get_dbh;
 		my $same = 1;
 		TABLE:for my $table (@$aTables){
 			my @aErrors = ();
-			my $ahFields = $self->fields_hash($table,$dbh1);
-			FIELD:for (my $i=0; $i<=@$ahFields-1; $i++){
-
-				my $hField = $ahFields->[$i];
-				my $field = $hField->{Field};
-
+			my @aFields = $self->field_list($table);
+			FIELD:for my $field (@aFields){
 				my ($string1,$string2) = $self->field_checksum($table,$field);
-
 				unless ((($string1 && $string2) && ($string1 eq $string2)) || (!$string1 && !$string2)){
 					push(@aErrors, $field);
 				}
@@ -196,7 +196,7 @@ DBIx::Compare::ContentChecksum::mysql - Extension to L<DBIx::Compare|DBIx::Compa
 
 	use DBIx::Compare::ContentChecksum::mysql;
 
-	my $oDB_Comparison = db_comparison->new($dbh1,$dbh2);
+	my $oDB_Comparison = compare_mysql_checksum->new($dbh1,$dbh2);
 	$oDB_Comparison->group_concat_max_len(10000000);
 	$oDB_Comparison->compare;
 
@@ -222,7 +222,7 @@ One issue I discovered during testing of this module is that in some cases, iden
 
 =item B<compare>
 
-Performs the comparison. Calls the methods compare_table_lists, compare_row_counts and compare_fields_checksum in order. In scalar context, returns a hashref of the differences found. In void context this method outputs a report to STDOUT. 
+Performs the comparison. Calls the methods compare_table_lists, compare_table_fields, compare_row_counts and compare_fields_checksum in order, each method comparing tables and fields that have passed the preceeding test. In scalar context, returns a hashref of the differences found. In void context this method outputs warnings to STDOUT describing the differences found. 
 
 =item B<compare_fields_checksum>
 

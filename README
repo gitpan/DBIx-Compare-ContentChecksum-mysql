@@ -1,4 +1,4 @@
-DBIx::Compare::ContentChecksum::mysql version 1.0
+DBIx::Compare::ContentChecksum::mysql version 1.2
 =================================================
 
 DBIx::Compare::ContentChecksum::mysql enables the rapid low-level comparison of MySQL databases using MySQL's built in MD5 and GROUP_CONCAT functions to create an MD5 checksum of the contents of each table field. It was developed to compare databases before and after table optimisation, but would be useful in any scenario where you need to check that two databases are identical. 

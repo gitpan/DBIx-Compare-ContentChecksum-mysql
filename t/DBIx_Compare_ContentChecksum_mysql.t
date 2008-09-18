@@ -3,7 +3,7 @@
 use strict;
 
 use FindBin;
-use Test::More tests=>15;
+use Test::More tests=>18;
 use Test::Group;
 use Test::Differences;
 
@@ -21,7 +21,7 @@ my $user_pass = '';
 my $dsn1 = "DBI:mysql:test:localhost";
 my $dsn2 = "DBI:mysql:test2:localhost";
 
-my ($dbh1,$dbh2,$oDB_Content,$sql_file1,$sql_file2);
+my ($dbh1,$dbh2,$oDB_Content,$oDB_Content2,$oDB_Content3,$oDB_Content4,$oDB_Content5,$oDB_Content6,$sql_file1,$sql_file2);
 
 eval {
 	$dbh1 = DBI->connect($dsn1, $user_name, $user_pass);
@@ -135,75 +135,102 @@ test 'deep_compare' => sub {
 
 ### now make the two databases different ###
 
-$oDB_Content->{ _tables } = undef;	# reset the table list
 add_differences($dbh1) if ($dbh1);
 
 ###--------------------------------------###
 
 #11
-test 'no primary key in table extra' => sub {
-	my (@aKeys,$keys);
-	$keys = $oDB_Content->get_primary_keys('extra',$dbh1);
-	is($keys,undef,'primary key string');
-	@aKeys = $oDB_Content->get_primary_keys('extra',$dbh1);
-	cmp_ok(@aKeys,'==',0,'primary key list');
+test 'object RE-init' => sub {
+	ok($oDB_Content2 = compare_mysql_checksum->new($dbh1,$dbh2),'init');
+	isa_ok($oDB_Content2,'db_comparison','DBIx::Compare object');
+	isa_ok($oDB_Content2,'compare_mysql_checksum','DBIx::Compare::ContentChecksum::mysql object');
 };
 
 #12
+test 'no primary key in table extra' => sub {
+	my (@aKeys,$keys);
+	$keys = $oDB_Content2->get_primary_keys('extra',$dbh1);
+	is($keys,undef,'primary key string');
+	@aKeys = $oDB_Content2->get_primary_keys('extra',$dbh1);
+	cmp_ok(@aKeys,'==',0,'primary key list');
+};
+
+#13
 test 're-examine databases' => sub {
 	my (@aTables,@aChecksum);
 	
 	# table lists
-	ok(@aTables = $oDB_Content->get_tables,'get_tables 1 & 2');
+	ok(@aTables = $oDB_Content2->get_tables,'get_tables 1 & 2');
 	eq_or_diff \@aTables,[['extra','filter','fluorochrome','laser','protocol_type'],['filter','fluorochrome','laser','protocol_type']],'table lists';
 	
 	# extra row in filter
-	cmp_ok($oDB_Content->row_count('filter',$dbh1),'==',4,'row_count');
+	cmp_ok($oDB_Content2->row_count('filter',$dbh1),'==',4,'row_count');
 
 	# different checksums for laser.colour_name
-	ok(@aChecksum = $oDB_Content->field_checksum('laser','colour_name'),"field_checksum('laser','colour_name')");
+	ok(@aChecksum = $oDB_Content2->field_checksum('laser','colour_name'),"field_checksum('laser','colour_name')");
 	eq_or_diff \@aChecksum,['9c4926911e466e889af52bb345859f1f3aa0245b2c384e908544a31c730995f0','e235f3560a066a5d5bd51d2ebe81813ae18af807eb7a24cf8f796af719ddca1f'],'laser.colour_name checksums';
 };
 
-#13
+#14
 test 're-do the individual comparisons' => sub {
 	my $hDiffs2;
-	is($oDB_Content->compare_table_lists,undef,'compare_table_lists');
-	is($oDB_Content->compare_row_counts,undef,'compare_row_counts');
-	is($oDB_Content->compare_fields_checksum,undef,'compare_fields_checksum');
+	is($oDB_Content2->compare_table_lists,undef,'compare_table_lists');
+	is($oDB_Content2->compare_row_counts,undef,'compare_row_counts');
+	is($oDB_Content2->compare_fields_checksum,undef,'compare_fields_checksum');
 	
-	ok($hDiffs2 = $oDB_Content->get_differences,'get_differences');
+	ok($hDiffs2 = $oDB_Content2->get_differences,'get_differences');
 	eq_or_diff $hDiffs2,{ 
+			'Fields unique to test2:localhost.fluorochrome' => ['cf260'],
 			'Row count' => ['filter'],
 			'Table laser fields' => ['colour_name'],
 			'Tables unique to test:localhost' => ['extra']
 		},'differences';
 };	
 
-# re-set the tables and diffs
-$oDB_Content->{ _error_list } = undef;
-$oDB_Content->{ _tables } = undef;	
-	
-#14
-test 're-do the comparison using comparein scalar context' => sub {
+#15
+test 're-do the comparison using compare in scalar context' => sub {
+	ok($oDB_Content3 = compare_mysql_checksum->new($dbh1,$dbh2),'init');
+	isa_ok($oDB_Content3,'db_comparison','DBIx::Compare object');
+	isa_ok($oDB_Content3,'compare_mysql_checksum','DBIx::Compare::ContentChecksum::mysql object');
 	my $hDiffs3;
-	ok($hDiffs3 = $oDB_Content->compare,'compare');	# just re-does the above
+	ok($hDiffs3 = $oDB_Content3->compare,'compare');	# just re-does the above
 	eq_or_diff $hDiffs3,{ 
+			'Fields unique to test2:localhost.fluorochrome' => ['cf260'],
 			'Row count' => ['filter'],
 			'Table laser fields' => ['colour_name'],
 			'Tables unique to test:localhost' => ['extra']
 		},'differences';
 };
 
-# re-set the tables and diffs
-$oDB_Content->{ _error_list } = undef;
-$oDB_Content->{ _tables } = undef;	
-
-#15
+#16
 test 're-do deep_compare' => sub {
+	ok($oDB_Content4 = compare_mysql_checksum->new($dbh1,$dbh2),'init');
+	isa_ok($oDB_Content4,'db_comparison','DBIx::Compare object');
+	isa_ok($oDB_Content4,'compare_mysql_checksum','DBIx::Compare::ContentChecksum::mysql object');
+	is($oDB_Content4->deep_compare,undef,'deep_compare');
+};
 
-	is($oDB_Content->deep_compare,undef,'deep_compare');
+#17
+test 're-do compare with dbh in reverse' => sub {
+	ok($oDB_Content5 = compare_mysql_checksum->new($dbh2,$dbh1),'init');
+	isa_ok($oDB_Content5,'db_comparison','DBIx::Compare object');
+	isa_ok($oDB_Content5,'compare_mysql_checksum','DBIx::Compare::ContentChecksum::mysql object');
+	my $hDiffs5;
+	ok($hDiffs5 = $oDB_Content5->compare,'compare');	# just re-does the above
+	eq_or_diff $hDiffs5,{ 
+			'Fields unique to test2:localhost.fluorochrome' => ['cf260'],
+			'Row count' => ['filter'],
+			'Table laser fields' => ['colour_name'],
+			'Tables unique to test:localhost' => ['extra']
+		},'differences';
+};
 
+#18
+test 're-do deep_compare with dbh in reverse' => sub {
+	ok($oDB_Content6 = compare_mysql_checksum->new($dbh2,$dbh1),'init');
+	isa_ok($oDB_Content6,'db_comparison','DBIx::Compare object');
+	isa_ok($oDB_Content6,'compare_mysql_checksum','DBIx::Compare::ContentChecksum::mysql object');
+	is($oDB_Content6->deep_compare,undef,'deep_compare');
 };
 
 # tests finished - disconnect from test
@@ -299,6 +326,7 @@ sub add_differences {
 	$dbh->do("insert into extra values(1),(2),(3),(4),(5)");
 	$dbh->do("insert into filter values('2','545',NULL)");
 	$dbh->do("update laser set colour_name = 'Greeny' where laser_id = 2");
+	$dbh->do("alter table fluorochrome drop column cf260");
 }
 
 sub trap_warn {
