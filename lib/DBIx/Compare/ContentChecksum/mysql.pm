@@ -20,9 +20,9 @@ require DBIx::Compare;
 		my $rows = $self->compare_row_counts;
 		my $fields = $self->compare_fields_checksum;
 
-		my $hDiffs = $self->get_differences;
-		if (defined wantarray()) {
-		    return $hDiffs;
+		if ($tables && $tfields && $rows && $fields){
+			return 1;
+			warn "No differences were found\n";
 		} else {
 			unless ($tables){
 				warn 	"Table Lists are different\n".
@@ -39,18 +39,16 @@ require DBIx::Compare;
 			unless ($fields){
 				warn 	"Data are different in some tables\n";
 			}
-			if ($tfields && $tables && $rows && $fields){
-				warn 	"The databases are probably the same\n";
-			} else {
-				if (%$hDiffs){
-					while (my ($type,$aErrors) = each %$hDiffs){
-						warn "$type:\n";
-						for my $error (@$aErrors){
-							warn "\t$error\n";
-						}
+			my $hDiffs = $self->get_differences;
+			if (%$hDiffs){
+				while (my ($type,$aErrors) = each %$hDiffs){
+					warn "$type:\n";
+					for my $error (@$aErrors){
+						warn "\t$error\n";
 					}
 				}
 			}
+			return;
 		}		
 	}
 	sub compare_fields_checksum {
@@ -222,7 +220,7 @@ One issue I discovered during testing of this module is that in some cases, iden
 
 =item B<compare>
 
-Performs the comparison. Calls the methods compare_table_lists, compare_table_fields, compare_row_counts and compare_fields_checksum in order, each method comparing tables and fields that have passed the preceeding test. In scalar context, returns a hashref of the differences found. In void context this method outputs warnings to STDOUT describing the differences found. 
+Performs the comparison. Calls the methods compare_table_lists, compare_table_fields, compare_row_counts and compare_fields_checksum in order, each method comparing tables and fields that have passed the preceeding test. Returns true if no differences are found, otherwise returns undef. 
 
 =item B<compare_fields_checksum>
 
